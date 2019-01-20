@@ -24,6 +24,13 @@ var (
 	requestData string
 )
 
+// Stats holds individual statistics from requests
+type Stats struct {
+	ResponseSize  int
+	ResponseDur   time.Duration
+	TotalRequests uint32
+}
+
 func init() {
 	flag.StringVar(&addr, "a", "", "address to benchmark")
 	flag.IntVar(&conns, "c", 10, "# of concurrent connections")
