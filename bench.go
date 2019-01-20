@@ -59,7 +59,7 @@ func main() {
 
 		}()
 	}
-
+	// channel is blocked till it is recieved, so handle all stats in this go routine
 	go func() {
 		for s := range statsChan {
 			total.ResponseSize += s.ResponseSize
@@ -72,6 +72,8 @@ func main() {
 	close(statsChan)
 
 	fmt.Printf("Average response size: %d\n", total.ResponseSize/int(total.TotalRequests))
+	fmt.Printf("Requests per second %d\n", (int(total.TotalRequests) / int(time.Since(start).Seconds())))
+	fmt.Printf("Total Requests sent: %d\n", int(total.TotalRequests))
 	log.Printf("Test completed in %fs", time.Since(start).Seconds())
 
 }
