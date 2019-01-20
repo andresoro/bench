@@ -3,12 +3,14 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -16,47 +18,66 @@ var (
 	addr        string
 	conns       int
 	timeout     int
+	duration    int
 	header      string
 	method      string
 	requestData string
-
-	client *http.Client
 )
 
 func init() {
 	flag.StringVar(&addr, "a", "", "address to benchmark")
 	flag.IntVar(&conns, "c", 10, "# of concurrent connections")
+	flag.IntVar(&duration, "d", 5, "duration of test in seconds")
 	flag.IntVar(&timeout, "t", 5, "# of seconds per request")
 	flag.StringVar(&header, "h", "", "header to add to request")
 	flag.StringVar(&method, "x", "GET", "http method to benchmark with")
 	flag.StringVar(&requestData, "r", "", "request data to send")
 	flag.Parse()
 
-	client = &http.Client{}
-
 }
 
 func main() {
 	var wg sync.WaitGroup
 
-	stats := make(chan Stats, conns)
+	statsChan := make(chan *Stats, conns)
+	start := time.Now()
+	total := Stats{
+		ResponseSize:  0,
+		TotalRequests: 0,
+	}
 
-	wg.Add(conns)
-
+	// handle load test
 	for i := 0; i <= conns; i++ {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			request(stats)
+			client := &http.Client{}
+
+			for start := time.Now(); time.Since(start) < 5*time.Second; {
+				statsChan <- request(client)
+			}
+
 		}()
 	}
 
+	go func() {
+		for s := range statsChan {
+			total.ResponseSize += s.ResponseSize
+			total.ResponseDur += s.ResponseDur
+			atomic.AddUint32(&total.TotalRequests, 1)
+		}
+	}()
+
 	wg.Wait()
+	close(statsChan)
+
+	fmt.Printf("Average response size: %d\n", total.ResponseSize/int(total.TotalRequests))
+	log.Printf("Test completed in %fs", time.Since(start).Seconds())
 
 }
 
-// request is meant to be called many times concurrently
-// results are sent to the Stats channel
-func request(ch chan Stats) {
+// request is an individual request that is sent to the server
+func request(client *http.Client) *Stats {
 
 	var buf io.Reader
 
@@ -67,7 +88,7 @@ func request(ch chan Stats) {
 	req, err := http.NewRequest(method, addr, buf)
 	if err != nil {
 		log.Println("Error building new request")
-		return
+		return nil
 	}
 
 	// add header
@@ -83,10 +104,10 @@ func request(ch chan Stats) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Println(err)
 		log.Println("Error making request to server")
-		return
+		return nil
 	}
+	end := time.Since(start)
 
 	if resp != nil {
 		defer resp.Body.Close()
@@ -96,19 +117,10 @@ func request(ch chan Stats) {
 		}
 	}
 
-	// read request and calculate size
-
 	size := len(body)
-	end := time.Since(start)
 
-	stats := Stats{
+	return &Stats{
 		ResponseSize: size,
 		ResponseDur:  end,
 	}
-
-	log.Printf("Request made with size: %d and duration: %s", size, end)
-
-	ch <- stats
-	return
-
 }
