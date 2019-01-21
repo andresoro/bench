@@ -1,0 +1,21 @@
+{
+    "methods": [
+        {
+            "method":"GET",
+            "endpoint": "getEndpoint",
+            "data": {
+                "key": "value"
+            }
+        },
+        {
+            "method":"POST",
+            "endpoint": "postEndpoint",
+            "data": {
+                "key": "value"
+            }
+        }
+    ],
+    "connections":20,
+    "host":"http://localhost:8080",
+    "duration":5
+}
