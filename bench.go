@@ -43,6 +43,7 @@ func init() {
 
 }
 
+// TODO: add a config file with url endpoints, methods, and request data to do multiple endpoints at once
 func main() {
 	var wg sync.WaitGroup
 

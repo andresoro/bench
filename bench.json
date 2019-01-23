@@ -1,15 +1,15 @@
 {
-    "methods": [
+    "requests": [
         {
             "method":"GET",
-            "endpoint": "getEndpoint",
+            "endpoint": "/getEndpoint",
             "data": {
                 "key": "value"
             }
         },
         {
             "method":"POST",
-            "endpoint": "postEndpoint",
+            "endpoint": "/postEndpoint",
             "data": {
                 "key": "value"
             }
