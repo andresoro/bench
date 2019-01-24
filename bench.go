@@ -1,83 +1,66 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
 var (
-	addr        string
-	conns       int
-	timeout     int
-	duration    int
-	header      string
-	method      string
-	requestData string
+	file string
 )
 
-// Stats holds individual statistics from requests
-type Stats struct {
-	ResponseSize  int
-	ResponseDur   time.Duration
-	TotalRequests uint32
-}
-
 func init() {
-	flag.StringVar(&addr, "a", "", "address to benchmark")
-	flag.IntVar(&conns, "c", 10, "# of concurrent connections")
-	flag.IntVar(&duration, "d", 5, "duration of test in seconds")
-	flag.IntVar(&timeout, "t", 5, "# of seconds per request")
-	flag.StringVar(&header, "h", "", "header to add to request")
-	flag.StringVar(&method, "x", "GET", "http method to benchmark with")
-	flag.StringVar(&requestData, "r", "", "request data to send")
+	flag.StringVar(&file, "f", "", "config file path")
 	flag.Parse()
 
 }
 
-// TODO: add a config file with url endpoints, methods, and request data to do multiple endpoints at once
 func main() {
 	var wg sync.WaitGroup
+	var statChannels map[string]chan *Stats
 
-	statsChan := make(chan *Stats, conns)
-	start := time.Now()
+	if file != "" {
+		conf, err := fromJSON(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// initialize map endpoint:channel
+		for _, req := range conf.req {
+			statChannels[req.Endpoint] = make(chan *Stats)
+		}
+
+	}
+
 	total := Stats{
 		ResponseSize:  0,
 		TotalRequests: 0,
 	}
 
-	// handle load test
+	start := time.Now()
+
+	// handle load test for each endpoint
 	for i := 0; i <= conns; i++ {
 		wg.Add(1)
 		go func() {
-			defer wg.Done()
-			client := &http.Client{}
-
-			for start := time.Now(); time.Since(start) < 5*time.Second; {
-				statsChan <- request(client)
-			}
+			c := &http.Client{}
 
 		}()
 	}
 	// channel is blocked till it is recieved, so handle all stats in this go routine
+	// divide based on request
 	go func() {
-		for s := range statsChan {
-			total.ResponseSize += s.ResponseSize
-			total.ResponseDur += s.ResponseDur
-			atomic.AddUint32(&total.TotalRequests, 1)
-		}
+
 	}()
 
 	wg.Wait()
-	close(statsChan)
+	for _, ch := range statChannels {
+		close(ch)
+	}
 
 	fmt.Printf("Average response size: %d\n", total.ResponseSize/int(total.TotalRequests))
 	fmt.Printf("Requests per second %d\n", (int(total.TotalRequests) / int(time.Since(start).Seconds())))
@@ -87,26 +70,7 @@ func main() {
 }
 
 // request is an individual request that is sent to the server
-func request(client *http.Client) *Stats {
-
-	var buf io.Reader
-
-	if requestData != "" {
-		buf = bytes.NewBufferString(requestData)
-	}
-
-	req, err := http.NewRequest(method, addr, buf)
-	if err != nil {
-		log.Println("Error building new request")
-		return nil
-	}
-
-	// add header
-	var h []string
-	if header != "" {
-		h = strings.Split(header, ":")
-		req.Header.Add(h[0], h[1])
-	}
+func request(client *http.Client, req *http.Request) *Stats {
 
 	// start time and make request
 	var body []byte

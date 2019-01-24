@@ -12,23 +12,18 @@ import (
 
 type config struct {
 	requests    []*http.Request
-	connections int
-	host        string
-	duration    time.Duration
-}
-
-type File struct {
-	Requests    []Request     `json:"requests"`
-	Connections int           `json:"connections"`
-	Host        string        `json:"host"`
-	Duration    time.Duration `json:"Duration"`
+	req         []Request     `json:"requests"`
+	connections int           `json:"connections`
+	host        string        `json:"host"`
+	duration    time.Duration `json:"duration"`
 }
 
 type Request struct {
-	Method   string `json:"method"`
-	Endpoint string `json:"endpoint"`
-	Data     string `json:"data"`
-	Header   string `json:"header"`
+	Method      string `json:"method"`
+	Endpoint    string `json:"endpoint"`
+	Data        string `json:"data"`
+	Header      string `json:"header"`
+	Connections string `json:"connections"`
 }
 
 // FromJSON returns a config from a json file
@@ -44,22 +39,16 @@ func fromJSON(path string) (*config, error) {
 		return nil, err
 	}
 
-	var file File
+	var conf config
 
-	err = json.Unmarshal(data, &file)
+	err = json.Unmarshal(data, &conf)
 	if err != nil {
 		return nil, err
 	}
 
-	conf := &config{
-		connections: file.Connections,
-		host:        file.Host,
-		duration:    file.Duration,
-	}
-
-	for _, req := range file.Requests {
+	for _, req := range conf.req {
 		var buf io.Reader
-		addr := file.Host + req.Endpoint
+		addr := conf.host + req.Endpoint
 
 		if req.Data != "" {
 			buf = bytes.NewBufferString(req.Data)
@@ -73,6 +62,6 @@ func fromJSON(path string) (*config, error) {
 		_ = append(conf.requests, r)
 	}
 
-	return conf, nil
+	return &conf, nil
 
 }
