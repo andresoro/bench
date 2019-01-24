@@ -46,3 +46,7 @@ func NewBench(path string) (*Bench, error) {
 
 	return b, nil
 }
+
+func (b *Bench) Run() {
+
+}

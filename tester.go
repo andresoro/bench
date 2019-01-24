@@ -55,14 +55,17 @@ func (l *LoadTester) test() error {
 
 	if resp != nil {
 		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
 	}
 
+	size := len(body)
+
 	l.ch <- &Stats{
-		ResponseSize: len(body),
+		Endpoint:     l.endpoint,
+		ResponseSize: size,
 		ResponseDur:  end,
 	}
 

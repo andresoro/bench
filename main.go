@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 )
 
 var (
@@ -15,5 +16,9 @@ func init() {
 }
 
 func main() {
-
+	b, err := NewBench(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	b.Run()
 }
