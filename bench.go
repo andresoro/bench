@@ -1,100 +1,48 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"io/ioutil"
-	"log"
+	"bytes"
+	"io"
 	"net/http"
-	"sync"
 	"time"
 )
 
-var (
-	file string
-)
+type Bench struct {
+	testers map[string]*LoadTester
+	ch      chan *Stats
 
-func init() {
-	flag.StringVar(&file, "f", "", "config file path")
-	flag.Parse()
-
+	conf config
 }
 
-func main() {
-	var wg sync.WaitGroup
-	var statChannels map[string]chan *Stats
+func NewBench(path string) (*Bench, error) {
 
-	if file != "" {
-		conf, err := fromJSON(file)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// initialize map endpoint:channel
-		for _, req := range conf.req {
-			statChannels[req.Endpoint] = make(chan *Stats)
-		}
-
+	b := &Bench{
+		testers: make(map[string]*LoadTester),
+		ch:      make(chan *Stats),
 	}
 
-	total := Stats{
-		ResponseSize:  0,
-		TotalRequests: 0,
-	}
-
-	start := time.Now()
-
-	// handle load test for each endpoint
-	for i := 0; i <= conns; i++ {
-		wg.Add(1)
-		go func() {
-			c := &http.Client{}
-
-		}()
-	}
-	// channel is blocked till it is recieved, so handle all stats in this go routine
-	// divide based on request
-	go func() {
-
-	}()
-
-	wg.Wait()
-	for _, ch := range statChannels {
-		close(ch)
-	}
-
-	fmt.Printf("Average response size: %d\n", total.ResponseSize/int(total.TotalRequests))
-	fmt.Printf("Requests per second %d\n", (int(total.TotalRequests) / int(time.Since(start).Seconds())))
-	fmt.Printf("Total Requests sent: %d\n", int(total.TotalRequests))
-	log.Printf("Test completed in %fs", time.Since(start).Seconds())
-
-}
-
-// request is an individual request that is sent to the server
-func request(client *http.Client, req *http.Request) *Stats {
-
-	// start time and make request
-	var body []byte
-	start := time.Now()
-
-	resp, err := client.Do(req)
+	conf, err := fromJSON(path)
 	if err != nil {
-		log.Println("Error making request to server")
-		return nil
+		return nil, err
 	}
-	end := time.Since(start)
 
-	if resp != nil {
-		defer resp.Body.Close()
-		body, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println("Error reading response body")
+	for _, req := range conf.Req {
+		var buf io.Reader
+		addr := conf.Host + req.Endpoint
+
+		if req.Data != "" {
+			buf = bytes.NewBufferString(req.Data)
 		}
+
+		r, err := http.NewRequest(req.Method, addr, buf)
+		if err != nil {
+			return nil, err
+		}
+
+		lt := NewTester(r, b.ch, req.Connections, 5*time.Second)
+		b.testers[req.Endpoint] = lt
+
 	}
 
-	size := len(body)
-
-	return &Stats{
-		ResponseSize: size,
-		ResponseDur:  end,
-	}
+	return b, nil
 }
