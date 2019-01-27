@@ -13,21 +13,19 @@ type LoadTester struct {
 	request  *http.Request
 	client   *http.Client
 	dur      time.Duration
-	ch       chan *Stats
 }
 
-func NewTester(r *http.Request, ch chan *Stats, conns int, dur time.Duration) *LoadTester {
+func NewTester(r *http.Request, conns int, dur time.Duration) *LoadTester {
 	return &LoadTester{
 		request: r,
 		client:  &http.Client{},
 		conns:   conns,
 		dur:     dur,
-		ch:      ch,
 	}
 }
 
 // Run initializes the LoadTester with its # of conns for a given duration
-func (l *LoadTester) Run() {
+func (l *LoadTester) Run(ch chan *Stats) {
 	var wg sync.WaitGroup
 
 	for i := 0; i <= l.conns; i++ {
@@ -35,7 +33,16 @@ func (l *LoadTester) Run() {
 		go func() {
 			defer wg.Done()
 			for start := time.Now(); time.Since(start) < l.dur; {
-				l.test()
+				s, err := l.test()
+				if err != nil {
+					ch <- &Stats{
+						Endpoint: l.endpoint,
+						err:      true,
+					}
+				} else {
+					ch <- s
+				}
+
 			}
 		}()
 	}
@@ -43,13 +50,13 @@ func (l *LoadTester) Run() {
 	wg.Wait()
 }
 
-func (l *LoadTester) test() error {
+func (l *LoadTester) test() (*Stats, error) {
 	var body []byte
 
 	start := time.Now()
 	resp, err := l.client.Do(l.request)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	end := time.Since(start)
 
@@ -57,18 +64,15 @@ func (l *LoadTester) test() error {
 		defer resp.Body.Close()
 		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	size := len(body)
-
-	l.ch <- &Stats{
-		Endpoint:     l.endpoint,
-		ResponseSize: size,
+	s := &Stats{
 		ResponseDur:  end,
+		ResponseSize: len(body),
 	}
 
-	return nil
+	return s, nil
 
 }
