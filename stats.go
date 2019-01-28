@@ -1,11 +1,14 @@
 package main
 
-import "time"
+import (
+	"time"
+)
 
 // Stats holds individual statistics from requests
 type Stats struct {
 	Endpoint      string
-	ResponseSize  int
+	ResponseSize  float64
 	ResponseDur   time.Duration
-	TotalRequests uint32
+	TotalRequests int64
+	err           int64
 }
