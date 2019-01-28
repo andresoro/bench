@@ -7,7 +7,7 @@ import (
 // Stats holds individual statistics from requests
 type Stats struct {
 	Endpoint      string
-	ResponseSize  float64
+	ResponseSize  int
 	ResponseDur   time.Duration
 	TotalRequests int64
 	err           int64

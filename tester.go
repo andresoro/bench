@@ -36,7 +36,7 @@ func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadT
 func (l *LoadTester) Run(ch chan *Stats) {
 	var wg sync.WaitGroup
 
-	for i := 0; i <= l.conns; i++ {
+	for i := 0; i < l.conns; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -80,7 +80,7 @@ func (l *LoadTester) test() (*Stats, error) {
 
 	s := &Stats{
 		ResponseDur:  end,
-		ResponseSize: float64(len(body)),
+		ResponseSize: (len(body)),
 	}
 
 	return s, nil

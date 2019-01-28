@@ -44,7 +44,7 @@ func NewBench(path string) (*Bench, error) {
 			return nil, err
 		}
 		// init new Tester with given request
-		lt := NewTester(r, req.Connections, 5*time.Second, req.Endpoint)
+		lt := NewTester(r, req.Connections, conf.Duration*time.Second, req.Endpoint)
 		b.testers[req.Endpoint] = lt
 
 	}
@@ -73,8 +73,8 @@ func (b *Bench) Run() {
 	close(b.ch)
 
 	fmt.Printf("Total Requests: %d \n", b.stats.TotalRequests)
-	fmt.Printf("Average Response Size: %f \n", b.stats.ResponseSize)
-	fmt.Printf("Average Request Time: %s \n", b.stats.ResponseDur.String())
+	fmt.Printf("Total amount of bytes read: %d \n", b.stats.ResponseSize)
+	fmt.Printf("Average Request Time: %s \n", b.stats.ResponseDur/time.Duration(b.stats.TotalRequests))
 	fmt.Printf("Total Errors: %d \n", b.stats.err)
 }
 
@@ -88,8 +88,6 @@ func (b *Bench) handleStats() {
 	}
 
 	// take averages
-
-	b.stats.ResponseSize = b.stats.ResponseSize / float64(b.stats.TotalRequests)
-	b.stats.ResponseDur = b.stats.ResponseDur / time.Duration(b.stats.TotalRequests)
+	//b.stats.ResponseDur = b.stats.ResponseDur / time.Duration(b.stats.TotalRequests)
 
 }
