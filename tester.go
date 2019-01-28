@@ -18,15 +18,16 @@ type LoadTester struct {
 	dur      time.Duration
 }
 
-func NewTester(r *http.Request, conns int, dur time.Duration) *LoadTester {
+func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadTester {
 	return &LoadTester{
-		request: r,
-		client:  &http.Client{},
-		conns:   conns,
-		dur:     dur,
-		ch:      make(chan *Stats),
-		mu:      &sync.Mutex{},
-		stats:   &Stats{},
+		endpoint: end,
+		request:  r,
+		client:   &http.Client{},
+		conns:    conns,
+		dur:      dur,
+		ch:       make(chan *Stats),
+		mu:       &sync.Mutex{},
+		stats:    &Stats{},
 	}
 }
 

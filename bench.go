@@ -44,7 +44,7 @@ func NewBench(path string) (*Bench, error) {
 			return nil, err
 		}
 		// init new Tester with given request
-		lt := NewTester(r, req.Connections, 5*time.Second)
+		lt := NewTester(r, req.Connections, 5*time.Second, req.Endpoint)
 		b.testers[req.Endpoint] = lt
 
 	}
@@ -61,6 +61,7 @@ func (b *Bench) Run() {
 
 	for _, tester := range b.testers {
 		wg.Add(1)
+		fmt.Printf("Running test on %s with %d connections for %s \n", tester.endpoint, tester.conns, tester.dur.String())
 		go func(ch chan *Stats) {
 			defer wg.Done()
 			tester.Run(ch)
@@ -73,7 +74,7 @@ func (b *Bench) Run() {
 
 	fmt.Printf("Total Requests: %d \n", b.stats.TotalRequests)
 	fmt.Printf("Average Response Size: %f \n", b.stats.ResponseSize)
-	fmt.Printf("Average Request Time: %d \n", b.stats.ResponseDur)
+	fmt.Printf("Average Request Time: %s \n", b.stats.ResponseDur.String())
 	fmt.Printf("Total Errors: %d \n", b.stats.err)
 }
 
