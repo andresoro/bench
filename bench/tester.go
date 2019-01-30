@@ -1,4 +1,4 @@
-package main
+package bench
 
 import (
 	"io/ioutil"
@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// LoadTester will run repeated requests on an endpoint and aggregate statistics
 type LoadTester struct {
 	endpoint string
 	conns    int
@@ -14,10 +15,10 @@ type LoadTester struct {
 	client   *http.Client
 	stats    *Stats
 	ch       chan *Stats
-	mu       *sync.Mutex
 	dur      time.Duration
 }
 
+// NewTester returns a tester
 func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadTester {
 	return &LoadTester{
 		endpoint: end,
@@ -26,7 +27,6 @@ func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadT
 		conns:    conns,
 		dur:      dur,
 		ch:       make(chan *Stats),
-		mu:       &sync.Mutex{},
 		stats:    &Stats{},
 	}
 }
@@ -36,53 +36,45 @@ func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadT
 func (l *LoadTester) Run(ch chan *Stats) {
 	var wg sync.WaitGroup
 
+	// run a tests for a given duration for all connections
 	for i := 0; i < l.conns; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-
 			for start := time.Now(); time.Since(start) < l.dur; {
-				stat, err := l.test()
-				if err != nil {
-					ch <- &Stats{
-						Endpoint: l.endpoint,
-						err:      1,
-					}
-					continue
-				}
-				ch <- stat
-
+				l.test()
 			}
 		}()
 	}
-
 	wg.Wait()
+
+	// average and send the statistics to the upstream channel when finished
+	l.stats.avg()
+	ch <- l.stats
 }
 
-// Make an individual request and return the statistics
-func (l *LoadTester) test() (*Stats, error) {
+// Make an individual request and update the stats
+func (l *LoadTester) test() {
 	var body []byte
 
 	start := time.Now()
 	resp, err := l.client.Do(l.request)
 	if err != nil {
-		return nil, err
+		l.stats.update(0, 0, true)
 	}
-	end := time.Since(start)
+	rd := time.Since(start)
 
 	if resp != nil {
 		defer resp.Body.Close()
 		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return nil, err
+			l.stats.update(0, 0, true)
 		}
 	}
 
-	s := &Stats{
-		ResponseDur:  end,
-		ResponseSize: (len(body)),
-	}
+	rs := len(body)
 
-	return s, nil
+	// update stats
+	l.stats.update(rs, rd, false)
 
 }

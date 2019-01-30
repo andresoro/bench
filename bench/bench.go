@@ -1,4 +1,4 @@
-package main
+package bench
 
 import (
 	"bytes"
@@ -13,18 +13,14 @@ import (
 // and stat aggregation
 type Bench struct {
 	testers map[string]*LoadTester
-	ch      chan *Stats
-	stats   *Stats
+	chans   map[string]chan *Stats
 }
 
 // NewBench returns a Bench tester
 func NewBench(path string) (*Bench, error) {
 
-	b := &Bench{
-		testers: make(map[string]*LoadTester),
-		ch:      make(chan *Stats),
-		stats:   &Stats{},
-	}
+	testers := make(map[string]*LoadTester)
+	chans := make(map[string]chan *Stats)
 
 	conf, err := fromJSON(path)
 	if err != nil {
@@ -45,8 +41,13 @@ func NewBench(path string) (*Bench, error) {
 		}
 		// init new Tester with given request
 		lt := NewTester(r, req.Connections, conf.Duration*time.Second, req.Endpoint)
-		b.testers[req.Endpoint] = lt
+		testers[req.Endpoint] = lt
+		chans[req.Endpoint] = make(chan *Stats, 1)
+	}
 
+	b := &Bench{
+		testers: testers,
+		chans:   chans,
 	}
 
 	return b, nil
@@ -57,37 +58,30 @@ func NewBench(path string) (*Bench, error) {
 func (b *Bench) Run() {
 	var wg sync.WaitGroup
 
-	go b.handleStats()
-
 	for _, tester := range b.testers {
 		wg.Add(1)
+
+		// get channel for this endpoint
+		ch := b.chans[tester.endpoint]
+
 		fmt.Printf("Running test on %s with %d connections for %s \n", tester.endpoint, tester.conns, tester.dur.String())
-		go func(ch chan *Stats) {
+
+		go func() {
 			defer wg.Done()
+			// run loadtester with the specific channel
 			tester.Run(ch)
-		}(b.ch)
+		}()
 
 	}
-
 	wg.Wait()
-	close(b.ch)
 
-	fmt.Printf("Total Requests: %d \n", b.stats.TotalRequests)
-	fmt.Printf("Total amount of bytes read: %d \n", b.stats.ResponseSize)
-	fmt.Printf("Average Request Time: %s \n", b.stats.ResponseDur/time.Duration(b.stats.TotalRequests))
-	fmt.Printf("Total Errors: %d \n", b.stats.err)
-}
-
-func (b *Bench) handleStats() {
-
-	for stat := range b.ch {
-		b.stats.err += stat.err
-		b.stats.ResponseDur += stat.ResponseDur
-		b.stats.ResponseSize += stat.ResponseSize
-		b.stats.TotalRequests++
+	for endp, ch := range b.chans {
+		stat := <-ch
+		fmt.Printf("Test completed for endpoint: %s \n", endp)
+		fmt.Printf("	Total requests completed: %d \n", stat.TotalRequests)
+		fmt.Printf("	Total errors: %d \n", stat.err)
+		fmt.Printf("	Average response size: %f bytes\n", stat.ResponseSize)
+		fmt.Printf("	Average response time: %fs \n", stat.ResponseDur.Seconds())
 	}
-
-	// take averages
-	//b.stats.ResponseDur = b.stats.ResponseDur / time.Duration(b.stats.TotalRequests)
 
 }
