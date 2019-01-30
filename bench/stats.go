@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -35,4 +36,12 @@ func (s *Stats) avg() {
 
 	//average response size
 	s.ResponseSize = s.ResponseSize / float64(s.TotalRequests-s.err)
+}
+
+func (s *Stats) print() {
+	fmt.Printf("Test completed for endpoint: %s \n", s.Endpoint)
+	fmt.Printf("	Total requests completed: %d \n", s.TotalRequests)
+	fmt.Printf("	Total errors: %d \n", s.err)
+	fmt.Printf("	Average response size: %f bytes\n", s.ResponseSize)
+	fmt.Printf("	Average response time: %fs \n", s.ResponseDur.Seconds())
 }

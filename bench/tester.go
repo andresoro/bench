@@ -14,7 +14,6 @@ type LoadTester struct {
 	request  *http.Request
 	client   *http.Client
 	stats    *Stats
-	ch       chan *Stats
 	dur      time.Duration
 }
 
@@ -26,14 +25,13 @@ func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadT
 		client:   &http.Client{},
 		conns:    conns,
 		dur:      dur,
-		ch:       make(chan *Stats),
-		stats:    &Stats{},
+		stats:    &Stats{Endpoint: end},
 	}
 }
 
 // Run initializes the LoadTester with its # of conns for a given duration
 // passes the results to the statistics channel
-func (l *LoadTester) Run(ch chan *Stats) {
+func (l *LoadTester) Run(ch chan Stats) {
 	var wg sync.WaitGroup
 
 	// run a tests for a given duration for all connections
@@ -50,7 +48,7 @@ func (l *LoadTester) Run(ch chan *Stats) {
 
 	// average and send the statistics to the upstream channel when finished
 	l.stats.avg()
-	ch <- l.stats
+	ch <- *l.stats
 }
 
 // Make an individual request and update the stats

@@ -12,15 +12,14 @@ import (
 // Bench is a struct that controls the testers, channel communication
 // and stat aggregation
 type Bench struct {
-	testers map[string]*LoadTester
-	chans   map[string]chan *Stats
+	testers []*LoadTester
+	ch      chan Stats
 }
 
 // NewBench returns a Bench tester
 func NewBench(path string) (*Bench, error) {
 
-	testers := make(map[string]*LoadTester)
-	chans := make(map[string]chan *Stats)
+	var testers []*LoadTester
 
 	conf, err := fromJSON(path)
 	if err != nil {
@@ -41,13 +40,12 @@ func NewBench(path string) (*Bench, error) {
 		}
 		// init new Tester with given request
 		lt := NewTester(r, req.Connections, conf.Duration*time.Second, req.Endpoint)
-		testers[req.Endpoint] = lt
-		chans[req.Endpoint] = make(chan *Stats, 1)
+		testers = append(testers, lt)
 	}
 
 	b := &Bench{
 		testers: testers,
-		chans:   chans,
+		ch:      make(chan Stats, len(testers)),
 	}
 
 	return b, nil
@@ -61,27 +59,18 @@ func (b *Bench) Run() {
 	for _, tester := range b.testers {
 		wg.Add(1)
 
-		// get channel for this endpoint
-		ch := b.chans[tester.endpoint]
-
-		fmt.Printf("Running test on %s with %d connections for %s \n", tester.endpoint, tester.conns, tester.dur.String())
-
-		go func() {
+		go func(t *LoadTester) {
 			defer wg.Done()
 			// run loadtester with the specific channel
-			tester.Run(ch)
-		}()
+			fmt.Printf("Running test on %s with %d connections for %s \n", t.endpoint, t.conns, t.dur.String())
+			t.Run(b.ch)
+		}(tester)
 
 	}
 	wg.Wait()
+	close(b.ch)
 
-	for endp, ch := range b.chans {
-		stat := <-ch
-		fmt.Printf("Test completed for endpoint: %s \n", endp)
-		fmt.Printf("	Total requests completed: %d \n", stat.TotalRequests)
-		fmt.Printf("	Total errors: %d \n", stat.err)
-		fmt.Printf("	Average response size: %f bytes\n", stat.ResponseSize)
-		fmt.Printf("	Average response time: %fs \n", stat.ResponseDur.Seconds())
+	for stat := range b.ch {
+		stat.print()
 	}
-
 }
