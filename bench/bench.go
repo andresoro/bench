@@ -16,8 +16,8 @@ type Bench struct {
 	ch      chan Stats
 }
 
-// NewBench returns a Bench tester
-func NewBench(path string) (*Bench, error) {
+// New returns a Bench tester
+func New(path string) (*Bench, error) {
 
 	var testers []*LoadTester
 
@@ -39,7 +39,7 @@ func NewBench(path string) (*Bench, error) {
 			return nil, err
 		}
 		// init new Tester with given request
-		lt := NewTester(r, req.Connections, conf.Duration*time.Second, req.Endpoint)
+		lt := NewTester(r, req.Connections, conf.Duration*time.Second, req.Rate*time.Millisecond, req.Endpoint)
 		testers = append(testers, lt)
 	}
 
@@ -62,7 +62,7 @@ func (b *Bench) Run() {
 		go func(t *LoadTester) {
 			defer wg.Done()
 			// run loadtester with the specific channel
-			fmt.Printf("Running test on %s with %d connections for %s \n", t.endpoint, t.conns, t.dur.String())
+			fmt.Printf("Running test on %s with %d connections making a request every %s \n", t.endpoint, t.conns, t.rate.String())
 			t.Run(b.ch)
 		}(tester)
 

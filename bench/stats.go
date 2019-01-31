@@ -19,7 +19,6 @@ func (s *Stats) update(rs int, rd time.Duration, err bool) {
 	s.TotalRequests++
 	if err {
 		s.err++
-
 		return
 	}
 	s.ResponseSize += float64(rs)
@@ -43,5 +42,5 @@ func (s *Stats) print() {
 	fmt.Printf("	Total requests completed: %d \n", s.TotalRequests)
 	fmt.Printf("	Total errors: %d \n", s.err)
 	fmt.Printf("	Average response size: %f bytes\n", s.ResponseSize)
-	fmt.Printf("	Average response time: %fs \n", s.ResponseDur.Seconds())
+	fmt.Printf("	Average response time: %s \n", s.ResponseDur.String())
 }

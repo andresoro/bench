@@ -14,11 +14,12 @@ type config struct {
 }
 
 type Request struct {
-	Method      string `json:"method"`
-	Endpoint    string `json:"endpoint"`
-	Data        string `json:"data"`
-	Header      string `json:"header"`
-	Connections int    `json:"connections"`
+	Method      string        `json:"method"`
+	Endpoint    string        `json:"endpoint"`
+	Data        string        `json:"data"`
+	Header      string        `json:"header"`
+	Connections int           `json:"connections"`
+	Rate        time.Duration `json:"rate"`
 }
 
 // FromJSON returns a config from a json file

@@ -15,16 +15,18 @@ type LoadTester struct {
 	client   *http.Client
 	stats    *Stats
 	dur      time.Duration
+	rate     time.Duration
 }
 
 // NewTester returns a tester
-func NewTester(r *http.Request, conns int, dur time.Duration, end string) *LoadTester {
+func NewTester(r *http.Request, conns int, dur, rate time.Duration, end string) *LoadTester {
 	return &LoadTester{
 		endpoint: end,
 		request:  r,
 		client:   &http.Client{},
 		conns:    conns,
 		dur:      dur,
+		rate:     rate,
 		stats:    &Stats{Endpoint: end},
 	}
 }
@@ -41,6 +43,7 @@ func (l *LoadTester) Run(ch chan Stats) {
 			defer wg.Done()
 			for start := time.Now(); time.Since(start) < l.dur; {
 				l.test()
+				time.Sleep(l.rate)
 			}
 		}()
 	}
