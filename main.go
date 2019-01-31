@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"log"
+
+	"github.com/andresoro/bench/bench"
 )
 
 var (
@@ -16,7 +18,7 @@ func init() {
 }
 
 func main() {
-	b, err := NewBench(file)
+	b, err := bench.New(file)
 	if err != nil {
 		log.Fatal(err)
 	}
