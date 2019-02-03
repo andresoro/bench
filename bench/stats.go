@@ -15,9 +15,9 @@ type Stats struct {
 }
 
 // update the object with incoming data
-func (s *Stats) update(rs int, rd time.Duration, err bool) {
+func (s *Stats) update(rs int, rd time.Duration, err error) {
 	s.TotalRequests++
-	if err {
+	if err != nil {
 		s.err++
 		return
 	}

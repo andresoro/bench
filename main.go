@@ -1,26 +1,18 @@
 package main
 
 import (
-	"flag"
 	"log"
+	"os"
 
 	"github.com/andresoro/bench/bench"
 )
 
-var (
-	file string
-)
-
-func init() {
-	flag.StringVar(&file, "f", "", "config file path")
-	flag.Parse()
-
-}
-
 func main() {
-	b, err := bench.New(file)
+
+	arg := os.Args[1]
+	b, err := bench.New(arg)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not open file")
 	}
 	b.Run()
 }

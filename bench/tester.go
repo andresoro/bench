@@ -61,7 +61,7 @@ func (l *LoadTester) test() {
 	start := time.Now()
 	resp, err := l.client.Do(l.request)
 	if err != nil {
-		l.stats.update(0, 0, true)
+		l.stats.update(0, 0, err)
 	}
 	rd := time.Since(start)
 
@@ -69,13 +69,13 @@ func (l *LoadTester) test() {
 		defer resp.Body.Close()
 		body, err = ioutil.ReadAll(resp.Body)
 		if err != nil {
-			l.stats.update(0, 0, true)
+			l.stats.update(0, 0, err)
 		}
 	}
 
 	rs := len(body)
 
 	// update stats
-	l.stats.update(rs, rd, false)
+	l.stats.update(rs, rd, nil)
 
 }

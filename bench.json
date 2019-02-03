@@ -2,20 +2,20 @@
     "requests": [
         {
             "method":"GET",
-            "endpoint": "/getEndpoint",
-            "data": {
-                "key": "value"
-            }
+            "endpoint": "/get/",
+            "data": "",
+            "connections": 5,
+            "rate":100
         },
         {
             "method":"POST",
-            "endpoint": "/postEndpoint",
-            "data": {
-                "key": "value"
-            }
+            "endpoint": "/post/",
+            "data": "",
+            "connections": 3,
+            "rate":100
+            
         }
     ],
-    "connections":20,
     "host":"http://localhost:8080",
     "duration":5
 }
